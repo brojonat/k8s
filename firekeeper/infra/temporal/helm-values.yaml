@@ -10,6 +10,11 @@ postgresql:
   enabled: false
 prometheus:
   enabled: true
+web:
+  enabled: true
+  additionalEnv:
+    - name: TEMPORAL_CSRF_COOKIE_INSECURE
+      value: "true"
 schema:
   createDatabase:
     enabled: false
