@@ -12,6 +12,8 @@ prometheus:
   enabled: true
 web:
   enabled: true
+  service:
+    port: 80
   additionalEnv:
     - name: TEMPORAL_CSRF_COOKIE_INSECURE
       value: "true"
