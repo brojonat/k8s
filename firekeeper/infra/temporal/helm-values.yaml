@@ -4,6 +4,15 @@ elasticsearch:
   enabled: false
 grafana:
   enabled: true
+  rbac:
+    create: true
+    namespaced: true
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: temporal
 mysql:
   enabled: false
 postgresql:

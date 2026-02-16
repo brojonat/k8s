@@ -81,6 +81,22 @@ apply-monitoring:
 	@echo "Monitoring applied. Reloading Prometheus..."
 	@$(KC) kubectl exec -n temporal deployment/temporal-prometheus-server -c prometheus-server -- killall -HUP prometheus 2>/dev/null || true
 
+# --- Grafana Dashboards ---
+
+.PHONY: apply-dashboards
+apply-dashboards:
+	@echo "Provisioning Grafana dashboards..."
+	@for f in grafana/*.json; do \
+		name=$$(basename $$f .json | tr '_' '-'); \
+		$(KC) kubectl create configmap grafana-dashboard-$$name \
+			--namespace temporal \
+			--from-file=$$name.json=$$f \
+			--dry-run=client -o yaml | \
+		$(KC) kubectl label --local -f - grafana_dashboard=1 -o yaml | \
+		$(KC) kubectl apply -f -; \
+	done
+	@echo "Dashboards provisioned. They will appear in Grafana within 60 seconds."
+
 # --- Temporal Admin ---
 
 .PHONY: temporal-namespaces
