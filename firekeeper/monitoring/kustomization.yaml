@@ -5,6 +5,4 @@ resources:
   - workers/affiliate-bounty-board.yaml
   - workers/deadman.yaml
   - workers/diddlylift.yaml
-  - workers/eth-notification.yaml
   - workers/gip.yaml
-  - workers/kaggo-treq.yaml
