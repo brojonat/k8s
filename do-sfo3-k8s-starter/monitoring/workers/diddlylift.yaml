@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: diddlylift-worker-metrics
+  labels:
+    app: diddlylift
+    component: workers
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9000"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: diddlylift
+    component: workers
+  ports:
+  - name: metrics
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+  type: ClusterIP

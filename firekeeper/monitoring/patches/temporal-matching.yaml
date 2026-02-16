@@ -1,0 +1,21 @@
+# Patch for temporal-matching deployment to enable Prometheus scraping
+# Apply with: kubectl patch deployment temporal-matching -n default --patch-file k8s/patches/temporal-matching.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-matching
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: temporal-matching
+        ports:
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP

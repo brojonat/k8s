@@ -1,0 +1,21 @@
+# Patch for eth-notification-workers deployment to enable Prometheus scraping
+# Apply with: kubectl patch deployment eth-notification-workers -n default --patch-file k8s/patches/eth-notification.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eth-notification-workers
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: eth-notification-workers
+        ports:
+        - name: metrics
+          containerPort: 9000
+          protocol: TCP

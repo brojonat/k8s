@@ -1,0 +1,21 @@
+# Patch for deadman-workers deployment to enable Prometheus scraping
+# Apply with: kubectl patch deployment deadman-workers -n default --patch-file k8s/patches/deadman.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deadman-workers
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: deadman-worker
+        ports:
+        - name: metrics
+          containerPort: 9000
+          protocol: TCP

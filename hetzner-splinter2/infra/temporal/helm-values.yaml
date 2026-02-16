@@ -1,0 +1,54 @@
+cassandra:
+  enabled: false
+elasticsearch:
+  enabled: false
+grafana:
+  enabled: true
+mysql:
+  enabled: false
+postgresql:
+  enabled: false
+prometheus:
+  enabled: true
+schema:
+  createDatabase:
+    enabled: false
+  setup:
+    enabled: false
+  update:
+    enabled: false
+server:
+  config:
+    persistence:
+      default:
+        driver: sql
+        sql:
+          database: postgres
+          driver: postgres12
+          existingSecret: temporal-default-store
+          host: us-west-2.pg.psdb.cloud
+          maxConnLifetime: 1h
+          maxConns: 5
+          maxIdleConns: 5
+          port: 5432
+          user: pscale_api_8rygen4fp93y.gareegatjolh
+          tls:
+            enabled: true
+            enableHostVerification: true
+            serverName: us-west-2.pg.psdb.cloud
+      visibility:
+        driver: sql
+        sql:
+          database: postgres
+          driver: postgres12
+          existingSecret: temporal-visibility-store
+          host: us-west-2.pg.psdb.cloud
+          maxConnLifetime: 1h
+          maxConns: 5
+          maxIdleConns: 5
+          port: 5432
+          user: pscale_api_8rygen4fp93y.gareegatjolh
+          tls:
+            enabled: true
+            enableHostVerification: true
+            serverName: us-west-2.pg.psdb.cloud

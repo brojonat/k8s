@@ -1,0 +1,46 @@
+cassandra:
+  enabled: false
+elasticsearch:
+  enabled: false
+grafana:
+  enabled: true
+mysql:
+  enabled: false
+postgresql:
+  enabled: true
+prometheus:
+  enabled: true
+schema:
+  createDatabase:
+    enabled: false
+  setup:
+    enabled: false
+  update:
+    enabled: false
+server:
+  config:
+    persistence:
+      default:
+        driver: sql
+        sql:
+          database: temporal
+          driver: postgres12
+          existingSecret: temporal-default-store
+          host: 5.78.109.232
+          maxConnLifetime: 1h
+          maxConns: 20
+          maxIdleConns: 20
+          port: 5432
+          user: postgres
+      visibility:
+        driver: sql
+        sql:
+          database: temporal_visibility
+          driver: postgres12
+          existingSecret: temporal-visibility-store
+          host: 5.78.109.232
+          maxConnLifetime: 1h
+          maxConns: 20
+          maxIdleConns: 20
+          port: 5432
+          user: postgres

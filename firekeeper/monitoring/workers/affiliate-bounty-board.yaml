@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: abb-worker-metrics
+  labels:
+    app: affiliate-bounty-board
+    component: workers
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9000"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: affiliate-bounty-board
+    component: workers
+  ports:
+  - name: metrics
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+  type: ClusterIP

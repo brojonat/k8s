@@ -1,0 +1,21 @@
+# Patch for forohtoo-worker deployment to enable Prometheus scraping
+# Apply with: kubectl patch deployment forohtoo-worker -n default --patch-file k8s/patches/forohtoo.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forohtoo-worker
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: worker
+        ports:
+        - name: metrics
+          containerPort: 9000
+          protocol: TCP

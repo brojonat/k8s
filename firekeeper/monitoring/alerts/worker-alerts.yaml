@@ -1,0 +1,52 @@
+groups:
+- name: worker_activity_alerts
+  interval: 30s
+  rules:
+
+  # Alert when activities are running slower than expected (per service)
+  - alert: SlowActivityExecution
+    expr: |
+      histogram_quantile(0.95,
+        sum by (service, activity, le) (rate(poll_activity_duration_seconds_bucket[5m]))
+      ) > 30
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{ $labels.service }}: Activity execution is slow (p95 > 30s)"
+      description: "The 95th percentile of {{ $labels.activity }} execution time on {{ $labels.service }} is {{ $value | humanizeDuration }}. This may indicate performance issues or RPC rate limiting."
+
+  # Alert when no activities have executed (worker might be down)
+  - alert: NoActivityExecutions
+    expr: |
+      sum by (service) (rate(poll_activity_duration_seconds_count[10m])) == 0
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: "{{ $labels.service }}: No workflow activities executing"
+      description: "No workflow activities have executed on {{ $labels.service }} in the last 15 minutes. The worker may be down or stuck."
+
+  # Alert when activity execution rate drops significantly
+  - alert: LowActivityExecutionRate
+    expr: |
+      sum by (service) (rate(poll_activity_duration_seconds_count[5m])) < 0.01
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{ $labels.service }}: Very low activity execution rate"
+      description: "Activity execution rate on {{ $labels.service }} is {{ $value | humanize }}/sec, significantly lower than expected."
+
+  # Alert on very slow activities (p99 threshold)
+  - alert: VerySlowActivityExecution
+    expr: |
+      histogram_quantile(0.99,
+        sum by (service, activity, le) (rate(poll_activity_duration_seconds_bucket[5m]))
+      ) > 60
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "{{ $labels.service }}: Activity execution is extremely slow (p99 > 60s)"
+      description: "The 99th percentile of {{ $labels.activity }} execution time on {{ $labels.service }} is {{ $value | humanizeDuration }}. Severe performance degradation detected."

@@ -1,0 +1,21 @@
+# Patch for affiliate-bounty-board-workers deployment to enable Prometheus scraping
+# Apply with: kubectl patch deployment affiliate-bounty-board-workers -n default --patch-file k8s/patches/affiliate-bounty-board.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: affiliate-bounty-board-workers
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: affiliate-bounty-board-worker
+        ports:
+        - name: metrics
+          containerPort: 9000
+          protocol: TCP

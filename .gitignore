@@ -1,0 +1,37 @@
+# Kubeconfigs (contain cluster credentials)
+*/kubeconfig
+
+# Sensitive key files
+*.keys
+
+# Rendered secrets (templates are OK, rendered values are not)
+**/secret.yaml
+**/secrets.yaml
+*.secret
+*.secret.yaml
+*-secret.yaml
+
+# Environment files
+.env*
+
+# Logs
+logs/
+*.log
+
+# Scratch/intermediate files
+scratch/
+*.dump
+*.csv.tmp
+
+# Exported dashboards (keep originals only)
+grafana/*-exported.json
+
+# Debug files
+debug-*.txt
+
+# Temporary files
+*.tmp
+*.bak
+
+# macOS
+.DS_Store

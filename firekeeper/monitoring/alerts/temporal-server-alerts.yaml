@@ -1,0 +1,52 @@
+groups:
+- name: temporal_server_health
+  interval: 30s
+  rules:
+
+  # Alert when schedule-to-start latency is high (task queue backing up)
+  - alert: TemporalHighScheduleToStartLatency
+    expr: |
+      histogram_quantile(0.95,
+        sum by (task_type, le) (rate(temporal_server_schedule_to_start_latency_bucket[5m]))
+      ) > 5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Temporal: High schedule-to-start latency (p95 > 5s)"
+      description: "Schedule-to-start latency for {{ $labels.task_type }} tasks is {{ $value | humanizeDuration }}. Task queues may be backing up."
+
+  # Alert when workflow task execution latency is high
+  - alert: TemporalHighWorkflowTaskLatency
+    expr: |
+      histogram_quantile(0.95,
+        sum by (namespace, le) (rate(temporal_server_workflow_task_execution_latency_bucket[5m]))
+      ) > 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Temporal: High workflow task latency (p95 > 10s)"
+      description: "Workflow task execution latency in namespace {{ $labels.namespace }} is {{ $value | humanizeDuration }}."
+
+  # Alert when a Temporal server component is not responding
+  - alert: TemporalServiceDown
+    expr: |
+      up{job=~".*temporal.*"} == 0
+    for: 3m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Temporal: Service component down"
+      description: "Temporal component {{ $labels.job }} ({{ $labels.instance }}) has been unreachable for over 3 minutes."
+
+  # Alert on persistence (database) errors
+  - alert: TemporalPersistenceErrors
+    expr: |
+      sum by (operation) (rate(temporal_persistence_errors_total[5m])) > 0.1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Temporal: Persistence errors detected"
+      description: "Temporal is experiencing persistence errors on operation {{ $labels.operation }} at {{ $value | humanize }}/sec. Check database connectivity and health."
