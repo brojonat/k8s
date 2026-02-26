@@ -46,6 +46,8 @@ server:
           maxConnLifetime: 1h
           maxConns: 5
           maxIdleConns: 5
+          # IMPORTANT: Must use port 5432 (direct), NOT 6432 (PgBouncer).
+          # Temporal uses prepared statements which PgBouncer doesn't support.
           port: 5432
           user: postgres.gareegatjolh
           tls:
@@ -62,6 +64,7 @@ server:
           maxConnLifetime: 1h
           maxConns: 5
           maxIdleConns: 5
+          # Must use direct connection (5432), not PgBouncer (6432)
           port: 5432
           user: postgres.gareegatjolh
           tls:
