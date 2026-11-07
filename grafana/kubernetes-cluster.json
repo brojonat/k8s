@@ -306,12 +306,12 @@
       "id": 12,
       "gridPos": { "x": 12, "y": 36, "w": 12, "h": 8 },
       "type": "timeseries",
-      "title": "Filesystem Usage %",
+      "title": "Node Disk Usage",
       "datasource": "TemporalMetrics",
       "targets": [
         {
-          "expr": "sum(container_fs_usage_bytes{namespace=~\"$namespace\"}) by (namespace) / sum(container_fs_limit_bytes{namespace=~\"$namespace\"}) by (namespace) * 100",
-          "legendFormat": "{{namespace}}",
+          "expr": "(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_avail_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
+          "legendFormat": "Used %",
           "refId": "A"
         }
       ],

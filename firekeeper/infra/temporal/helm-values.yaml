@@ -17,6 +17,10 @@ grafana:
       label: grafana_dashboard
       labelValue: "1"
       searchNamespace: temporal
+  dashboards:
+    default:
+      misc-clustermonitoring-kubernetes-github:
+        url: ""
 mysql:
   enabled: false
 postgresql:

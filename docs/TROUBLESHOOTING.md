@@ -6,12 +6,128 @@ Common issues and solutions for Temporal & Application monitoring.
 
 ## Table of Contents
 
+- [Node Networking Issues](#node-networking-issues) — **check this first**
 - [Grafana Issues](#grafana-issues)
 - [Prometheus Issues](#prometheus-issues)
 - [AlertManager Issues](#alertmanager-issues)
 - [Worker Metrics Issues](#worker-metrics-issues)
 - [Dashboard Issues](#dashboard-issues)
 - [Storage Issues](#storage-issues)
+
+---
+
+## Node Networking Issues
+
+> **Check this first.** A node-level network failure presents as a dozen
+> unrelated-looking monitoring failures at once. If *many* components broke
+> simultaneously, suspect the node before debugging any single component.
+
+### Many pods CrashLooping at once / "server misbehaving" / "no such host"
+
+**Symptom:** Several unrelated things fail together, e.g.
+
+- `temporal-history` CrashLoopBackOff with
+  `sql schema version compatibility check failed: ... no usable database connection found`
+  and `lookup us-west-2.pg.psdb.cloud on 10.43.0.10:53: server misbehaving`
+- Temporal workers CrashLooping on `--check-connection` liveness probes
+- CoreDNS logs full of `i/o timeout` to upstream resolvers (1.1.1.1, 185.12.64.2)
+- `cert-manager-cainjector` CrashLooping
+- `kubectl top` fails with `Metrics API not available`
+- CronJob pods all `Error`
+
+**Cause:** The node lost its IPv4 address. On Hetzner, `eth0` gets its IPv4 via
+DHCP (lease `LIFETIME=1d`, renew every 12h) while IPv6 is configured *statically*
+in `/etc/netplan/50-cloud-init.yaml`. If systemd-networkd fails to install the
+DHCPv4 route during renewal it marks the link `failed` **and never retries**:
+
+```
+eth0: Could not set DHCPv4 route: Connection timed out
+eth0: Failed
+```
+
+IPv6 keeps working, so Tailscale and `kubectl` still work — which is why the node
+looks `Ready` and the problem masquerades as many application failures.
+
+Note the feedback loop: CrashLooping pods churn veth interfaces constantly, which
+floods netlink and can itself cause the route-install timeout.
+
+**Diagnose:**
+
+```bash
+# Internal DNS works but external does not => node egress, not a CoreDNS bug
+kubectl -n nats exec deploy/nats-box -- nslookup kubernetes.default.svc.cluster.local
+kubectl -n nats exec deploy/nats-box -- nslookup google.com
+
+# Is it DNS, or all egress? If raw TCP fails too, it is not DNS.
+kubectl -n nats exec deploy/nats-box -- nc -z -w3 1.1.1.1 443
+```
+
+Then inspect the host itself with a privileged hostNetwork pod:
+
+```bash
+kubectl run hostdbg --restart=Never --image=busybox:1.36 \
+  --overrides='{"spec":{"hostNetwork":true,"containers":[{"name":"hostdbg",
+"image":"busybox:1.36","securityContext":{"privileged":true},
+"command":["sleep","3600"],"volumeMounts":[{"name":"h","mountPath":"/host"}]}],
+"volumes":[{"name":"h","hostPath":{"path":"/"}}]}}'
+
+# eth0 should have an `inet` line. If only `inet6`, IPv4 is gone.
+kubectl exec hostdbg -- ip addr show eth0
+kubectl exec hostdbg -- ip -4 route show          # expect a default route
+
+# Confirms the cause: ADMIN_STATE=failed / IPV4_ADDRESS_STATE=off
+kubectl exec hostdbg -- cat /host/run/systemd/netif/links/2
+kubectl exec hostdbg -- cat /host/run/systemd/netif/leases/2   # ADDRESS= and ROUTER=
+kubectl exec hostdbg -- sh -c \
+  'chroot /host journalctl -u systemd-networkd --since "14 days ago" \
+   | grep -viE "veth|cni0|flannel" | tail -30'
+```
+
+**Fix (non-disruptive).** Re-add the address and route from the saved lease.
+This is purely additive, does not touch IPv6, and will not drop your Tailscale
+session. Use the `ADDRESS=` / `ROUTER=` values from the lease file:
+
+```bash
+kubectl exec hostdbg -- sh -c '
+  ip addr  add 5.78.157.239/32 dev eth0
+  ip route add 172.31.1.1/32   dev eth0
+  ip route add default via 172.31.1.1 dev eth0'
+
+# Verify host, then pod, egress
+kubectl exec hostdbg -- ping -c2 1.1.1.1
+kubectl -n nats exec deploy/nats-box -- nslookup us-west-2.pg.psdb.cloud
+```
+
+Then reset the CrashLoop backoff timers so recovery is immediate rather than
+waiting out the 5-minute backoff:
+
+```bash
+kubectl -n temporal delete pod -l app.kubernetes.io/component=history
+kubectl -n cert-manager delete pod -l app.kubernetes.io/component=cainjector
+kubectl -n kube-system  delete pod -l k8s-app=metrics-server
+kubectl delete pod --field-selector=status.phase==Failed -n default   # stale job pods
+
+# Verify
+kubectl -n temporal exec deploy/temporal-admintools -- temporal operator cluster health
+kubectl top nodes
+```
+
+**Important — this fix is not durable.** A manual `ip addr add` is not managed by
+systemd-networkd, so the DHCP lease is still not being renewed. A reboot
+re-runs DHCP from scratch and should recover on its own, but to hand IPv4 back to
+networkd you need:
+
+```bash
+networkctl reconfigure eth0      # or: systemctl restart systemd-networkd
+```
+
+Only do this **with Hetzner web-console access available** — it re-applies the
+IPv6 config too, and if IPv6 drops you lose the Tailscale path and with it all
+remote access to the box.
+
+To stop this recurring, consider converting `eth0`'s IPv4 to a static address in
+netplan (the Hetzner IP is permanently assigned anyway), removing the dependency
+on DHCPv4 renewal succeeding.
 
 ---
 

@@ -1,0 +1,81 @@
+groups:
+- name: forohtoo_rpc_alerts
+  interval: 30s
+  rules:
+
+  # Alert when rate limit hits are occurring
+  - alert: ForohtooRPCRateLimited
+    expr: |
+      sum by (endpoint) (rate(solana_rpc_rate_limit_hits_total[5m])) > 0.1
+    for: 5m
+    labels:
+      severity: warning
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: RPC endpoint {{ $labels.endpoint }} is rate limiting"
+      description: "Endpoint {{ $labels.endpoint }} is returning rate limit errors at {{ $value | humanize }}/sec. Consider reducing poll frequency or adding more RPC endpoints."
+
+  # Alert when rate limits are severe (multiple endpoints)
+  - alert: ForohtooRPCRateLimitedSevere
+    expr: |
+      count(sum by (endpoint) (rate(solana_rpc_rate_limit_hits_total[5m])) > 0.1) >= 2
+    for: 5m
+    labels:
+      severity: critical
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: Multiple RPC endpoints are rate limiting"
+      description: "{{ $value }} RPC endpoints are returning rate limit errors. Polling may be significantly degraded."
+
+  # Alert when RPC error rate is high
+  - alert: ForohtooRPCHighErrorRate
+    expr: |
+      sum(rate(solana_rpc_calls_total{status="error"}[5m]))
+      /
+      sum(rate(solana_rpc_calls_total[5m]))
+      > 0.3
+    for: 5m
+    labels:
+      severity: warning
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: High RPC error rate ({{ $value | humanizePercentage }})"
+      description: "More than 30% of RPC calls are failing. Check endpoint health and rate limits."
+
+  # Alert when RPC calls are very slow
+  - alert: ForohtooRPCSlowCalls
+    expr: |
+      histogram_quantile(0.95,
+        sum by (le, endpoint) (rate(solana_rpc_call_duration_seconds_bucket[5m]))
+      ) > 5
+    for: 5m
+    labels:
+      severity: warning
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: Slow RPC calls to {{ $labels.endpoint }}"
+      description: "95th percentile RPC latency to {{ $labels.endpoint }} is {{ $value | humanizeDuration }}. May indicate network issues or endpoint degradation."
+
+  # Alert when retries are excessive
+  - alert: ForohtooExcessiveRetries
+    expr: |
+      sum(rate(solana_rpc_retries_total[5m])) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: High RPC retry rate"
+      description: "RPC calls are being retried at {{ $value | humanize }}/sec. This may indicate endpoint instability."
+
+  # Alert when no RPC calls are happening (worker might be stuck)
+  - alert: ForohtooNoRPCCalls
+    expr: |
+      sum(rate(solana_rpc_calls_total[10m])) == 0
+    for: 15m
+    labels:
+      severity: critical
+      service: forohtoo
+    annotations:
+      summary: "Forohtoo: No RPC calls in 15 minutes"
+      description: "The forohtoo worker has not made any Solana RPC calls in 15 minutes. The worker may be down or disconnected."
