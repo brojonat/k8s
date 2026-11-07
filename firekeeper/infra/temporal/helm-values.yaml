@@ -7,6 +7,10 @@ grafana:
   rbac:
     create: true
     namespaced: true
+  service:
+    annotations:
+      tailscale.com/expose: "true"
+      tailscale.com/hostname: firekeeper-temporal-grafana
   sidecar:
     dashboards:
       enabled: true
@@ -23,6 +27,9 @@ web:
   enabled: true
   service:
     port: 80
+    annotations:
+      tailscale.com/expose: "true"
+      tailscale.com/hostname: firekeeper-temporal-ui
   additionalEnv:
     - name: TEMPORAL_CSRF_COOKIE_INSECURE
       value: "true"

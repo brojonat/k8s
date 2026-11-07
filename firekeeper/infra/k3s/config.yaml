@@ -1,0 +1,8 @@
+# Node protection: without these, kubelet has no memory eviction and the node can
+# lock up under memory pressure before anything kills pods (outage 2026-11-06).
+# eviction-hard and eviction-minimum-reclaim replace k3s's defaults, so the
+# nodefs and imagefs entries must stay listed here.
+kubelet-arg:
+  - "system-reserved=memory=1Gi"
+  - "eviction-hard=memory.available<500Mi,nodefs.available<5%,imagefs.available<5%"
+  - "eviction-minimum-reclaim=memory.available=256Mi,nodefs.available=10%,imagefs.available=10%"
